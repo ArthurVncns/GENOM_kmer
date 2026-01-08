@@ -1,0 +1,117 @@
+Aeropyrum pernix K1,Archaea
+Archaeoglobus fulgidus DSM 4304,Archaea
+Archaeoglobus profundus DSM 5631,Archaea
+Caldivirga maquilingensis IC-167,Archaea
+Candidatus Korarchaeum cryptofilum OPF8,Archaea
+Candidatus Methanoregula boonei 6A8,Archaea
+Candidatus Methanosphaerula palustris E1-9c,Archaea
+Cenarchaeum symbiosum A,Archaea
+Desulfurococcus kamchatkensis 1221n,Archaea
+Haloarcula marismortui ATCC 43049,Archaea
+Haloarcula marismortui ATCC 43049,Archaea
+Halobacterium sp. NRC-1,Archaea
+Halomicrobium mukohataei DSM 12286,Archaea
+Haloquadratum walsbyi DSM 16790,Archaea
+Halorhabdus utahensis DSM 12940,Archaea
+Halorubrum lacusprofundi ATCC 49239,Archaea
+Halorubrum lacusprofundi ATCC 49239,Archaea
+Haloterrigena turkmenica DSM 5511,Archaea
+Hyperthermus butylicus DSM 5456,Archaea
+Ignicoccus hospitalis KIN4,Archaea
+Metallosphaera sedula DSM 5348,Archaea
+Methanobrevibacter ruminantium M1,Archaea
+Methanocaldococcus fervens AG86,Archaea
+Methanocella paludicola SANAE,Archaea
+Methanococcoides burtonii DSM 6242,Archaea
+Methanococcus aeolicus Nankai-3,Archaea
+Methanococcus maripaludis C6,Archaea
+Methanococcus vannielii SB,Archaea
+Methanocorpusculum labreanum Z,Archaea
+Methanoculleus marisnigri JR1,Archaea
+Methanopyrus kandleri AV19,Archaea
+Methanosaeta thermophila PT,Archaea
+Methanosarcina acetivorans C2A,Archaea
+Methanosarcina barkeri str. Fusaro,Archaea
+Methanosarcina mazei Go1,Archaea
+Methanosphaera stadtmanae DSM 3091,Archaea
+Methanospirillum hungatei JF-1,Archaea
+Nanoarchaeum equitans Kin4-M,Archaea
+Natronomonas pharaonis DSM 2160,Archaea
+Nitrosopumilus maritimus SCM1,Archaea
+Picrophilus torridus DSM 9790,Archaea
+Pyrobaculum aerophilum str. IM2,Archaea
+Pyrobaculum arsenaticum DSM 13514,Archaea
+Pyrococcus abyssi GE5,Archaea
+Pyrococcus furiosus DSM 3638,Archaea
+Pyrococcus horikoshii OT3,Archaea
+Staphylothermus marinus F1,Archaea
+Sulfolobus acidocaldarius DSM 639,Archaea
+Sulfolobus solfataricus P2,Archaea
+Thermococcus gammatolerans EJ3,Archaea
+Thermofilum pendens Hrk 5,Archaea
+Thermoplasma acidophilum DSM 1728,Archaea
+Thermoplasma volcanium GSS1,Archaea
+Thermoproteus neutrophilus V24Sta,Archaea
+Acholeplasma laidlawii PG-8A,Bacteria
+Acidobacterium capsulatum ATCC 51196,Bacteria
+Akkermansia muciniphila ATCC BAA-835,Bacteria
+Alicyclobacillus acidocaldarius subsp. acidocaldarius DSM 446,Bacteria
+Aquifex aeolicus VF5,Bacteria
+Bacillus cereus Q1,Bacteria
+Bacillus pseudofirmus OF4,Bacteria
+Bacteroides fragilis YCH46,Bacteria
+Bdellovibrio bacteriovorus HD100,Bacteria
+Bordetella pertussis Tohama I,Bacteria
+Borrelia burgdorferi B31,Bacteria
+Campylobacter jejuni subsp. jejuni 81-176,Bacteria
+Candidatus Amoebophilus asiaticus 5a2,Bacteria
+Candidatus Cloacamonas acidaminovorans,Bacteria
+Candidatus Endomicrobium sp. Rs-D17,Bacteria
+Carboxydothermus hydrogenoformans Z2901,Bacteria
+Chlamydia trachomatis 434/Bu,Bacteria
+Chlorobium chlorochromatii CaD3,Bacteria
+Chloroflexus aurantiacus J-10-fl,Bacteria
+Clostridium acetobutylicum ATCC 824,Bacteria
+Corynebacterium glutamicum ATCC 13032,Bacteria
+Coxiella burnetii RSA 493,Bacteria
+Cupriavidus taiwanensis,Bacteria
+Cupriavidus taiwanensis,Bacteria
+Cyanothece sp. ATCC 51142,Bacteria
+Cyanothece sp. ATCC 51142,Bacteria
+Dehalococcoides ethenogenes 195,Bacteria
+Deinococcus radiodurans R1,Bacteria
+Deinococcus radiodurans R1,Bacteria
+Dictyoglomus thermophilum H-6-12,Bacteria
+Elusimicrobium minutum Pei191,Bacteria
+Fibrobacter succinogenes subsp. succinogenes S85,Bacteria
+Flavobacterium psychrophilum JIP02,Bacteria
+Fusobacterium nucleatum subsp. nucleatum ATCC 25586,Bacteria
+Gemmata obscuriglobus UQM 2246,Bacteria
+Gemmatimonas aurantiaca T-27,Bacteria
+Gloeobacter violaceus PCC 7421,Bacteria
+Leptospira interrogans serovar Lai str. 56601,Bacteria
+Leptospira interrogans serovar Lai str. 56601,Bacteria
+Magnetococcus sp. MC-1,Bacteria
+Methylacidiphilum infernorum V4,Bacteria
+Mycoplasma genitalium G37,Bacteria
+Nostoc punctiforme PCC 73102,Bacteria
+Opitutus terrae PB90-1,Bacteria
+Pedobacter heparinus DSM 2366,Bacteria
+Pirellula staleyi DSM 6068,Bacteria
+Prochlorococcus marinus str. AS9601,Bacteria
+Psychrobacter arcticus 273-4,Bacteria
+Rhizobium leguminosarum bv. trifolii WSM1325,Bacteria
+Rhodopirellula baltica SH 1,Bacteria
+Rhodospirillum rubrum ATCC 11170,Bacteria
+Rickettsia rickettsii str. Iowa,Bacteria
+Shewanella putrefaciens CN-32,Bacteria
+Solibacter usitatus Ellin6076,Bacteria
+Synechococcus elongatus PCC 6301,Bacteria
+Thermanaerovibrio acidaminovorans DSM 6589,Bacteria
+Thermoanaerobacter tengcongensis MB4,Bacteria
+Thermobaculum terrenum ATCC BAA-798,Bacteria
+Thermobaculum terrenum ATCC BAA-798,Bacteria
+Thermodesulfovibrio yellowstonii DSM 11347,Bacteria
+Thermomicrobium roseum DSM 5159,Bacteria
+Thermotoga maritima MSB8,Bacteria
+Thermus thermophilus HB8,Bacteria

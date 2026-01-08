@@ -1,0 +1,4 @@
+genomes/
+.vscode
+test.ipynb
+scripts/nn_genomes.py

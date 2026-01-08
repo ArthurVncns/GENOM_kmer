@@ -55,8 +55,7 @@ Thermoproteus neutrophilus V24Sta
 Acholeplasma laidlawii PG-8A
 Acidobacterium capsulatum ATCC 51196
 Akkermansia muciniphila ATCC BAA-835
-Alicyclobacillus acidocaldarius subsp.
-acidocaldarius DSM 446
+Alicyclobacillus acidocaldarius subsp. acidocaldarius DSM 446
 Aquifex aeolicus VF5
 Bacillus cereus Q1
 Bacillus pseudofirmus OF4
@@ -84,11 +83,9 @@ Deinococcus radiodurans R1
 Deinococcus radiodurans R1
 Dictyoglomus thermophilum H-6-12
 Elusimicrobium minutum Pei191
-Fibrobacter succinogenes subsp.
-succinogenes S85
+Fibrobacter succinogenes subsp. succinogenes S85
 Flavobacterium psychrophilum JIP02/86
-Fusobacterium nucleatum subsp. nucleatum
-ATCC 25586
+Fusobacterium nucleatum subsp. nucleatum ATCC 25586
 Gemmata obscuriglobus UQM 2246
 Gemmatimonas aurantiaca T-27
 Gloeobacter violaceus PCC 7421
