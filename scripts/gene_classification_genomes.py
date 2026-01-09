@@ -5,129 +5,113 @@ import pandas as pd
 from Bio import SeqIO
 from Bio.Seq import Seq
 from itertools import product
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from xgboost import XGBClassifier
+from gene_assignement import generate_all_kmers, canonical_kmer, generate_canonical_kmers, calculate_signature_gene
 
-# ---------------------
-# CONFIGURATION
-# ---------------------
 
 K = 4
-ROOT_DIR = "genomes"
-MAX_GENES_PER_GENOME = 500
-MIN_SEQ_LEN = 200
+GENOME_DIR = "genomes"
+MAX_GENES_PER_GENOME = 800
+MIN_SEQ_LEN = 300
+MIN_GENES_COUNT = 30
 RES_DIR = "results"
 os.makedirs(RES_DIR, exist_ok=True)
 
-# ---------------------
-# FONCTIONS K-MER
-# ---------------------
+def main():
+    canonical_kmers = generate_canonical_kmers(K)
+    organism_dirs = [d for d in os.listdir(GENOME_DIR)]
 
-def canonical_kmer(kmer):
-    rc = str(Seq(kmer).reverse_complement())
-    return min(kmer, rc)
+    X = []
+    y = []
 
-all_kmers = [''.join(p) for p in product('ATCG', repeat=K)]
-canonical_set = sorted(set(canonical_kmer(k) for k in all_kmers))
-
-def get_kmer_counts(seq, k, canonical_kmers):
-    seq = seq.upper()
-    counts = {kmer: 0 for kmer in canonical_kmers}
-    if len(seq) < k: return [0]*len(canonical_kmers)
-    for i in range(len(seq) - k + 1):
-        word = seq[i:i+k]
-        if set(word) <= {'A','T','C','G'}:
-            counts[canonical_kmer(word)] += 1
-    total = sum(counts.values())
-    if total == 0: return [0]*len(canonical_kmers)
-    return [counts[kmer]/total for kmer in canonical_kmers]
-
-# ---------------------
-# CHARGEMENT DES DONNÉES
-# ---------------------
-
-X = []
-y = []
-
-print("Loading genes...")
-organisms_list = [d for d in os.listdir(ROOT_DIR) if os.path.isdir(os.path.join(ROOT_DIR, d))]
-
-for organism in organisms_list:
-    genes_file = os.path.join(ROOT_DIR, organism, "cds.fasta")
-    if not os.path.exists(genes_file):
-        continue
-
-    genes = list(SeqIO.parse(genes_file, "fasta"))
-    
-    # Downsampling
-    if len(genes) > MAX_GENES_PER_GENOME:
-        genes = random.sample(genes, MAX_GENES_PER_GENOME)
-
-    for gene in genes:
-        seq = str(gene.seq).upper()
-        if len(seq) < MIN_SEQ_LEN or 'N' in seq:
+    print("Retrieving data...")
+    for organism in organism_dirs:
+        genes_file = os.path.join(GENOME_DIR, organism, "cds.fasta")
+        if not os.path.exists(genes_file):
             continue
+
+        genes = list(SeqIO.parse(genes_file, "fasta"))
+        valid_genes = [g for g in genes if len(g.seq) >= MIN_SEQ_LEN]
+
+        if len(valid_genes) < MIN_GENES_COUNT:
+            continue
+
+        if len(valid_genes) > MAX_GENES_PER_GENOME:
+            valid_genes = random.sample(valid_genes, MAX_GENES_PER_GENOME)
+
+        for gene in valid_genes:
+            seq = str(gene.seq).upper()
+            
+            signature_dict = calculate_signature_gene(seq, K, canonical_kmers)
+            
+            if signature_dict is not None:
+                signature_vector = [signature_dict[kmer] for kmer in canonical_kmers]
+                X.append(signature_vector)
+                y.append(organism)
+    
+    X = np.array(X)
+    y = np.array(y)
+
+    print(f"Dataset: {X.shape[0]} genes from {len(set(y))} organisms.")
+
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+    le = LabelEncoder()
+    y_encoded = le.fit_transform(y)
+
+    rf = RandomForestClassifier(n_estimators=100, n_jobs=-1, random_state=42)
+    xgb = XGBClassifier(
+        n_estimators=100, 
+        learning_rate=0.1, 
+        max_depth=6, 
+        tree_method='hist', 
+        random_state=42
+    )
+
+    print("Performing Random Forest...")
+    y_pred_rf_idx = cross_val_predict(rf, X, y_encoded, cv=cv, n_jobs=-1)
+    print("Performing XGBoost...")
+    y_pred_xgb_idx = cross_val_predict(xgb, X, y_encoded, cv=cv, n_jobs=-1)
+
+    y_pred_rf = le.inverse_transform(y_pred_rf_idx)
+    y_pred_xgb = le.inverse_transform(y_pred_xgb_idx)
+    
+    print("Preparing and saving results...")
+    results = []
+    for org in le.classes_:
+        mask = (y == org)
         
-        X.append(get_kmer_counts(seq, K, canonical_set))
-        y.append(organism)
+        acc_rf = np.mean(y_pred_rf[mask] == y[mask])
+        acc_xgb = np.mean(y_pred_xgb[mask] == y[mask])
+        count = np.sum(mask)
+        
+        results.append({
+            'Organism': org,
+            'Gene_Count': count,
+            'Accuracy_RF': acc_rf,
+            'Accuracy_XGB': acc_xgb,
+            'Best_Model': 'RF' if acc_rf > acc_xgb else 'XGB' if acc_xgb > acc_rf else 'Tie'
+        })
 
-X = np.array(X)
-y = np.array(y)
+    df_res = pd.DataFrame(results)
+    total_mean = pd.Series({
+        'Organism': 'TOTAL_MEAN',
+        'Gene_Count': df_res['Gene_Count'].sum(),
+        'Accuracy_RF': df_res['Accuracy_RF'].mean(),
+        'Accuracy_XGB': df_res['Accuracy_XGB'].mean(),
+        'Best_Model': '-'
+    })
+    df_res = pd.concat([df_res, total_mean.to_frame().T], ignore_index=True)
 
-print(f"Dataset: {X.shape[0]} genes from {len(set(y))} organisms.")
+    csv_path = os.path.join(RES_DIR, "comparaison_rf_xgboost.csv")
+    df_res.to_csv(csv_path, index=False)
 
-# ---------------------
-# SPLIT
-# ---------------------
+    print(f"\nResults saved in: {csv_path}")
+    print(f"Mean RF: {total_mean['Accuracy_RF']:.4f}")
+    print(f"Mean XGB: {total_mean['Accuracy_XGB']:.4f}")
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, 
-    test_size=0.2, 
-    random_state=42, 
-    stratify=y
-)
-
-# ---------------------
-# ENTRAÎNEMENT
-# ---------------------
-print("Training RandomForest...")
-clf = RandomForestClassifier(
-    n_estimators=100, 
-    n_jobs=-1, 
-    random_state=42,
-    class_weight='balanced'
-)
-clf.fit(X_train, y_train)
-
-# ---------------------
-# 8. ÉVALUATION & SAUVEGARDE CSV
-# ---------------------
-
-print("\nPredicting on test set...")
-y_pred = clf.predict(X_test)
-
-print("Generating classification report...")
-report_dict = classification_report(y_test, y_pred, output_dict=True)
-
-df_report = pd.DataFrame(report_dict).transpose()
-df_metrics = df_report.drop(['accuracy', 'macro avg', 'weighted avg'], errors='ignore')
-df_global = df_report.loc[['accuracy', 'macro avg', 'weighted avg'], :]
-
-metrics_path = os.path.join(RES_DIR, "classification_metrics.csv")
-df_metrics.index.name = "Organism"
-df_metrics.to_csv(metrics_path)
-print(f"-> Per-genome metrics saved to: {metrics_path}")
-
-print("Generating confusion analysis...")
-confusion_data = []
-classes = sorted(list(set(y)))
-df_conf = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred})
-confusion_counts = df_conf.groupby(['Actual', 'Predicted']).size().reset_index(name='Count')
-confusion_counts['Total_Actual'] = confusion_counts.groupby('Actual')['Count'].transform('sum')
-confusion_counts['Percentage'] = (confusion_counts['Count'] / confusion_counts['Total_Actual']) * 100
-confusion_counts = confusion_counts.sort_values(by=['Actual', 'Count'], ascending=[True, False])
-
-conf_path = os.path.join(RES_DIR, "confusion_details.csv")
-confusion_counts.to_csv(conf_path, index=False, float_format="%.2f")
-print(f"-> Confusion details saved to: {conf_path}")
+if __name__ == "__main__":
+    main()

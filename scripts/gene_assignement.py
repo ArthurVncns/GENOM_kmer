@@ -98,7 +98,7 @@ def main():
         if len(valid_genes) < MIN_GENES_COUNT:
             continue
 
-        for gene in genes:
+        for gene in valid_genes:
             seq_str = str(gene.seq)
 
             vec = calculate_signature_gene(seq_str, K, canonical_kmers)

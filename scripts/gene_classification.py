@@ -9,6 +9,7 @@ from itertools import product
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+from gene_assignement import generate_all_kmers, canonical_kmer, generate_canonical_kmers, calculate_signature_gene
 
 # ---------------------
 # 1. CONFIGURATION
@@ -16,8 +17,8 @@ from sklearn.metrics import classification_report, confusion_matrix, ConfusionMa
 K = 4  # taille du k-mer
 ROOT_DIR = "genomes"
 LABEL_FILE = "genomes_labeled.txt"
-MAX_GENES_PER_GENOME = 500  # downsampling
-MIN_SEQ_LEN = 200           # gènes trop courts ignorés
+MIN_SEQ_LEN = 300
+MIN_GENES_COUNT = 30
 
 FIG_DIR = "figures"
 os.makedirs(FIG_DIR, exist_ok=True)
@@ -73,13 +74,14 @@ for organism in os.listdir(ROOT_DIR):
         continue
 
     genes = list(SeqIO.parse(genes_file, "fasta"))
-    if len(genes) > MAX_GENES_PER_GENOME:
-        genes = random.sample(genes, MAX_GENES_PER_GENOME)
+
+    valid_genes = [g for g in genes if len(g.seq) >= MIN_SEQ_LEN]
+
+    if len(valid_genes) < MIN_GENES_COUNT:
+        continue
 
     for gene in genes:
         seq = str(gene.seq).upper()
-        if len(seq) < MIN_SEQ_LEN or 'N' in seq:
-            continue
         X.append(get_kmer_counts(seq, K, canonical_set))
         y.append(labels_dict[organism])
         groups.append(organism)

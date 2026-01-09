@@ -33,7 +33,7 @@ organism_names = df["Organism"].values
 domains = df["Domain"].values
 X = df.drop(columns=["Organism", "Domain"])
 
-# --- 2. NORMALIZATION (POUR PCA) ---
+# --- 2. NORMALIZATION ---
 
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
@@ -70,18 +70,12 @@ linked = linkage(condensed_dist, method="average")
 
 plt.figure(figsize=(12, 10))
 
-# 1. Définir une palette de couleurs
 domain_colors = {
-    "Bacteria": "#1f77b4",  # Bleu
-    "Archaea": "#d62728"    # Rouge
-    # Ajoutez "Eukaryota": "green" si besoin
+    "Bacteria": "#1f77b4",
+    "Archaea": "#d62728"
 }
-
-# 2. Créer un mapping : Organisme -> Couleur
-# On associe chaque nom d'organisme à son domaine pour retrouver la couleur vite
 org_to_domain = dict(zip(organism_names, domains))
 
-# 3. Tracer le dendrogramme
 d = dendrogram(
     linked,
     labels=organism_names,
@@ -90,21 +84,17 @@ d = dendrogram(
     leaf_font_size=10
 )
 
-# 4. Appliquer les couleurs aux labels de l'axe X
-ax = plt.gca() # Récupère l'axe courant
-x_labels = ax.get_xmajorticklabels() # Récupère la liste des objets "texte" en bas
+ax = plt.gca()
+x_labels = ax.get_xmajorticklabels()
 
 for label in x_labels:
     org_name = label.get_text()
-    # On cherche le domaine de cet organisme
     domain = org_to_domain.get(org_name)
     
     if domain in domain_colors:
         label.set_color(domain_colors[domain])
-        # Optionnel : mettre en gras pour mieux voir
         label.set_fontweight("bold") 
 
-# 5. Ajouter une légende manuelle (car le dendrogramme ne le fait pas)
 legend_patches = [
     mpatches.Patch(color=color, label=domain) 
     for domain, color in domain_colors.items()
