@@ -1,4 +1,5 @@
-genomes/
+genomes/*
 .vscode
 test.ipynb
 scripts/nn_genomes.py
+scripts/__pycache__/
