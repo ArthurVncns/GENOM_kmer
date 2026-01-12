@@ -21,10 +21,10 @@ import tqdm
 K = 4
 GENOME_DIR = "genomes"
 MIN_SEQ_LEN = 300
-MAX_GENES_PER_GENOME = 800
+MAX_GENES_PER_GENOME = 1500
 MIN_GENES_COUNT = 30
 BATCH_SIZE = 64
-EPOCHS = 30
+EPOCHS = 100
 LEARNING_RATE = 0.001
 FIG_DIR = "figures"
 os.makedirs(FIG_DIR, exist_ok=True)
@@ -32,17 +32,35 @@ os.makedirs(FIG_DIR, exist_ok=True)
 device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 print(f"Using device: {device}")
 
+class ResidualBlock(nn.Module):
+    def __init__(self, size):
+        super().__init__()
+        self.block = nn.Sequential(
+            nn.Linear(size, size),
+            nn.BatchNorm1d(size),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(size, size),
+            nn.BatchNorm1d(size)
+        )
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        return self.relu(x + self.block(x))
+    
 class GenomicClassifier(nn.Module):
     def __init__(self, input_size, num_classes):
         super(GenomicClassifier, self).__init__()
         self.network = nn.Sequential(
-            nn.Linear(input_size, 512),
+            nn.Linear(input_size, 1024),
             nn.ReLU(),
             nn.Dropout(0.2),
             
-            nn.Linear(512, 256),
+            nn.Linear(1024, 256),
             nn.ReLU(),
             nn.Dropout(0.2),
+
+            ResidualBlock(256),
 
             nn.Linear(256, 128),
             nn.ReLU(),
@@ -53,6 +71,30 @@ class GenomicClassifier(nn.Module):
 
     def forward(self, x):
         return self.network(x)
+    
+class EarlyStopping:
+    def __init__(self, patience=5, min_delta=0):
+        """
+        Args:
+            patience (int): Combien d'époques attendre après la dernière amélioration.
+            min_delta (float): Changement minimum pour être considéré comme une amélioration.
+        """
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.best_loss = None
+        self.early_stop = False
+
+    def __call__(self, val_loss):
+        if self.best_loss is None:
+            self.best_loss = val_loss
+        elif val_loss > self.best_loss - self.min_delta:
+            self.counter += 1
+            if self.counter >= self.patience:
+                self.early_stop = True
+        else:
+            self.best_loss = val_loss
+            self.counter = 0
     
 def main():
     canonical_kmers = generate_canonical_kmers(K)
@@ -109,7 +151,7 @@ def main():
     for fold, (train_idx, val_idx) in enumerate(skf.split(X_scaled, y_encoded)):
         print(f"\n--- Fold {fold+1}/{n_splits} ---")
         
-        # Split des données
+        # Split data
         X_train_fold = torch.tensor(X_scaled[train_idx], dtype=torch.float32)
         y_train_fold = torch.tensor(y_encoded[train_idx], dtype=torch.long)
         X_val_fold = torch.tensor(X_scaled[val_idx], dtype=torch.float32)
@@ -123,27 +165,38 @@ def main():
 
         fold_losses = []
 
-        # Boucle d'entraînement
+        early_stopper = EarlyStopping(patience=5, min_delta=0.001)
+        
         for epoch in range(EPOCHS):
+            # TRAINING
             model.train()
             epoch_loss = 0
-            
             pbar = tqdm.tqdm(train_loader, desc=f"Epoch {epoch+1}/{EPOCHS}", leave=False)
+            
             for batch_X, batch_y in pbar:
                 batch_X, batch_y = batch_X.to(device), batch_y.to(device)
-                
                 optimizer.zero_grad()
                 outputs = model(batch_X)
                 loss = criterion(outputs, batch_y)
                 loss.backward()
                 optimizer.step()
-                
                 epoch_loss += loss.item()
-                pbar.set_postfix({"loss": f"{loss.item():.4f}"})
-            
-            fold_losses.append(epoch_loss / len(train_loader))
 
-        # Évaluation sur le set de validation
+            avg_train_loss = epoch_loss / len(train_loader)
+            fold_losses.append(avg_train_loss)
+
+            # VALIDATION (early stopping)
+            model.eval()
+            with torch.no_grad():
+                val_outputs = model(X_val_fold.to(device))
+                val_loss = criterion(val_outputs, y_val_fold.to(device)).item()
+            
+            early_stopper(val_loss)
+            if early_stopper.early_stop:
+                print(f"Early stopping at epoch {epoch+1}")
+                break
+
+        # Final validation
         model.eval()
         with torch.no_grad():
             val_outputs = model(X_val_fold.to(device))
