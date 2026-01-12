@@ -4,131 +4,96 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from Bio import SeqIO
-from Bio.Seq import Seq
-from itertools import product
-from sklearn.model_selection import GroupShuffleSplit
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from gene_assignement import generate_all_kmers, canonical_kmer, generate_canonical_kmers, calculate_signature_gene
 
-# ---------------------
-# 1. CONFIGURATION
-# ---------------------
-K = 4  # taille du k-mer
-ROOT_DIR = "genomes"
+K = 4
+GENOME_DIR = "genomes"
 LABEL_FILE = "genomes_labeled.txt"
+MAX_GENES_PER_GENOME = 1000
 MIN_SEQ_LEN = 300
 MIN_GENES_COUNT = 30
 
 FIG_DIR = "figures"
 os.makedirs(FIG_DIR, exist_ok=True)
 
-# ---------------------
-# 2. GENERATE CANONICAL K-MERS
-# ---------------------
-def canonical_kmer(kmer):
-    rc = str(Seq(kmer).reverse_complement())
-    return min(kmer, rc)
+def main():
+    canonical_kmers = generate_canonical_kmers(K)
+    organism_dirs = [d for d in os.listdir(GENOME_DIR)]
 
-# All possible canonical k-mers
-all_kmers = [''.join(p) for p in product('ATCG', repeat=K)]
-canonical_set = sorted(set(canonical_kmer(k) for k in all_kmers))
+    labels_df = pd.read_csv(LABEL_FILE, names=["Organism", "Domain"])
+    labels_df['Organism'] = labels_df['Organism'].str.replace(" ", "_")
+    labels_dict = dict(zip(labels_df["Organism"], labels_df["Domain"]))
 
-# ---------------------
-# 3. K-MER COUNTS
-# ---------------------
-def get_kmer_counts(seq, k, canonical_kmers):
-    seq = seq.upper()
-    counts = {kmer: 0 for kmer in canonical_kmers}
-    if len(seq) < k: return [0]*len(canonical_kmers)
+    X = []
+    y = []
+
+    print("Retrieving data...")
+    for organism in organism_dirs:
+        genes_file = os.path.join(GENOME_DIR, organism, "cds.fasta")
+        if not os.path.exists(genes_file):
+            continue
+
+        genes = list(SeqIO.parse(genes_file, "fasta"))
+        valid_genes = [g for g in genes if len(g.seq) >= MIN_SEQ_LEN]
+
+        if len(valid_genes) < MIN_GENES_COUNT:
+            continue
+
+        if len(valid_genes) > MAX_GENES_PER_GENOME:
+            valid_genes = random.sample(valid_genes, MAX_GENES_PER_GENOME)
+
+        for gene in valid_genes:
+            seq = str(gene.seq).upper()
+            
+            signature_dict = calculate_signature_gene(seq, K, canonical_kmers)
+            
+            if signature_dict is not None:
+                signature_vector = [signature_dict[kmer] for kmer in canonical_kmers]
+                X.append(signature_vector)
+                y.append(labels_dict[organism])
     
-    for i in range(len(seq) - k + 1):
-        word = seq[i:i+k]
-        if set(word) <= {'A','T','C','G'}:
-            canon = canonical_kmer(word)
-            counts[canon] += 1
-    
-    total = sum(counts.values())
-    if total == 0: return [0]*len(canonical_kmers)
-    return [counts[kmer]/total for kmer in canonical_kmers]
+    X = np.array(X)
+    y = np.array(y)
 
-# ---------------------
-# 4. LOAD LABELS
-# ---------------------
-labels_df = pd.read_csv(LABEL_FILE, names=["Organism", "Domain"])
-labels_df['Organism'] = labels_df['Organism'].str.replace(" ", "_")
-labels_dict = dict(zip(labels_df["Organism"], labels_df["Domain"]))
+    print(f"Dataset: {X.shape[0]} genes.")
 
-# ---------------------
-# 5. BUILD DATASET
-# ---------------------
-X = []
-y = []
-groups = []  # for GroupShuffleSplit
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-print("Loading genes and computing k-mer signatures...")
+    le = LabelEncoder()
+    y_encoded = le.fit_transform(y)
 
-for organism in os.listdir(ROOT_DIR):
-    genes_file = os.path.join(ROOT_DIR, organism, "cds.fasta")
-    if not os.path.exists(genes_file):
-        continue
+    models = {
+        "Logistic Regression": LogisticRegression(max_iter=1000, random_state=42),
+        "SVM (Linear)": SVC(kernel='linear', random_state=42),
+        "SVM (RBF)": SVC(kernel='rbf', random_state=42)
+    }
 
-    genes = list(SeqIO.parse(genes_file, "fasta"))
+    plt.figure(figsize=(15, 5))
 
-    valid_genes = [g for g in genes if len(g.seq) >= MIN_SEQ_LEN]
+    for i, (name, clf) in enumerate(models.items()):
+        print(f"\nEvaluating {name}...")
+        
+        y_pred_idx = cross_val_predict(clf, X, y_encoded, cv=cv, n_jobs=-1)
+        
+        acc = accuracy_score(y_encoded, y_pred_idx)
+        print(f"Accuracy {name}: {acc:.4f}")
 
-    if len(valid_genes) < MIN_GENES_COUNT:
-        continue
+        ax = plt.subplot(1, 3, i + 1)
+        cm = confusion_matrix(y_encoded, y_pred_idx)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=le.classes_)
+        disp.plot(ax=ax, cmap='Blues', colorbar=False)
+        ax.set_title(f"{name}\nAcc: {acc:.2f}")
 
-    for gene in genes:
-        seq = str(gene.seq).upper()
-        X.append(get_kmer_counts(seq, K, canonical_set))
-        y.append(labels_dict[organism])
-        groups.append(organism)
+    plt.tight_layout()
+    plt.savefig(os.path.join(FIG_DIR, "binary_classification_domains.png"), dpi=300)
 
-X = np.array(X)
-y = np.array(y)
-groups = np.array(groups)
+    print(f"\nDone. Confusion matrix saved in: {FIG_DIR}")
 
-print(f"Dataset ready: {X.shape[0]} genes, {len(set(groups))} genomes, {len(set(y))} domains")
-
-# ---------------------
-# 6. SPLIT TRAIN / TEST BY GENOME
-# ---------------------
-gss = GroupShuffleSplit(test_size=0.2, random_state=42)
-train_idx, test_idx = next(gss.split(X, y, groups))
-
-X_train, X_test = X[train_idx], X[test_idx]
-y_train, y_test = y[train_idx], y[test_idx]
-
-# ---------------------
-# 7. TRAIN CLASSIFIER
-# ---------------------
-clf = RandomForestClassifier(
-    n_estimators=200,
-    random_state=42,
-    n_jobs=-1
-)
-clf.fit(X_train, y_train)
-
-# ---------------------
-# 8. EVALUATE
-# ---------------------
-y_pred = clf.predict(X_test)
-print("\nClassification report (per domain):")
-print(classification_report(y_test, y_pred))
-
-acc = np.mean(y_pred == y_test)
-print(f"Overall accuracy: {acc*100:.2f}%")
-
-# Confusion matrix
-cm = confusion_matrix(y_test, y_pred, labels=np.unique(y))
-disp = ConfusionMatrixDisplay(cm, display_labels=np.unique(y))
-disp.plot(cmap='Blues')
-plt.title("Confusion Matrix - Gene Classification")
-plt.tight_layout()
-plt.savefig(os.path.join(FIG_DIR, "confusion_matrix.png"), dpi=300)
-plt.close()
-
-print(f"\nFigures saved in '{FIG_DIR}/'")
-print("Script completed successfully.")
+if __name__ == "__main__":
+    main()
